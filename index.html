@@ -2,51 +2,19 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Nova Flight Simulator ✈️</title>
+<title>Hill Racer Deluxe 🚗💨</title>
 
 <style>
 body {
   margin: 0;
   overflow: hidden;
+  background: linear-gradient(#38bdf8, #0f172a);
   font-family: Arial;
   color: white;
 }
 
-/* WORLD */
-#world {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(#1e3a8a 60%, #14532d 60%);
-}
-
-/* RUNWAY */
-#runway {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 40px;
-  background: #333;
-}
-
-/* PLANE */
-#plane {
-  position: absolute;
-  left: 120px;
-  width: 60px;
-  height: 30px;
-  background: cyan;
-  border-radius: 5px;
-}
-
-/* CLOUD */
-.cloud {
-  position: absolute;
-  width: 100px;
-  height: 50px;
-  background: white;
-  border-radius: 50px;
-  opacity: 0.3;
+canvas {
+  display: block;
 }
 
 /* HUD */
@@ -54,12 +22,10 @@ body {
   position: absolute;
   top: 10px;
   left: 10px;
-  font-size: 14px;
-}
-
-#hud span {
-  display: block;
-  margin-bottom: 4px;
+  font-size: 16px;
+  background: rgba(0,0,0,0.3);
+  padding: 10px;
+  border-radius: 10px;
 }
 
 /* GAME OVER */
@@ -74,6 +40,7 @@ body {
 
 button {
   padding: 10px 20px;
+  margin-top: 10px;
   cursor: pointer;
 }
 </style>
@@ -81,132 +48,193 @@ button {
 
 <body>
 
-<div id="world"></div>
-<div id="runway"></div>
-<div id="plane"></div>
-
 <div id="hud">
-  <span id="speed">Speed: 0</span>
-  <span id="alt">Altitude: 0</span>
-  <span id="fuel">Fuel: 100%</span>
-  <span id="dist">Distance: 0m</span>
+  <div id="dist">Distance: 0</div>
+  <div id="coins">Coins: 0</div>
+  <div id="fuel">Fuel: 100</div>
 </div>
 
 <div id="gameOver">
   <h1 id="msg"></h1>
-  <button onclick="restart()">Restart</button>
+  <button onclick="location.reload()">Restart</button>
 </div>
 
+<canvas id="game"></canvas>
+
 <script>
-const plane = document.getElementById("plane");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let y = window.innerHeight - 70;
-let velocity = 0;
-let pitch = 0;
-let throttle = 0;
-let speed = 0;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-let fuel = 100;
+/* CAR */
+let car = {
+  x: 100,
+  y: 200,
+  vx: 0,
+  vy: 0,
+  angle: 0
+};
+
+/* WORLD */
+let terrain = [];
+let coins = [];
 let distance = 0;
+let fuel = 100;
 let gameRunning = true;
+let coinCount = 0;
 
-// wind effect
-let wind = (Math.random() - 0.5) * 0.2;
+/* GENERATE TERRAIN (SMOOTH HILLS) */
+for (let i = 0; i < 3000; i++) {
+  terrain.push({
+    x: i * 40,
+    y: 450 + Math.sin(i * 0.2) * 80 + Math.sin(i * 0.05) * 120
+  });
 
-/* CONTROLS */
-document.addEventListener("keydown", e => {
-  if (e.key === "ArrowUp") pitch -= 2;
-  if (e.key === "ArrowDown") pitch += 2;
-  if (e.key === "ArrowRight") throttle += 0.3;
-  if (e.key === "ArrowLeft") throttle -= 0.3;
-});
-
-/* CLOUDS */
-function createCloud() {
-  const cloud = document.createElement("div");
-  cloud.classList.add("cloud");
-  cloud.style.top = Math.random() * 300 + "px";
-  document.body.appendChild(cloud);
-
-  let x = window.innerWidth;
-
-  function move() {
-    if (!gameRunning) return;
-
-    x -= 1;
-    cloud.style.left = x + "px";
-
-    if (x < -100) cloud.remove();
-    else requestAnimationFrame(move);
+  // coins randomly
+  if (Math.random() < 0.1) {
+    coins.push({ x: i * 40, collected: false });
   }
-
-  move();
 }
 
-setInterval(createCloud, 2000);
+/* CONTROLS */
+let keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-/* GAME LOOP */
-function gameLoop() {
+/* PHYSICS LOOP */
+function update() {
   if (!gameRunning) return;
 
-  // clamp controls
-  pitch = Math.max(-20, Math.min(20, pitch));
-  throttle = Math.max(0, Math.min(6, throttle));
-
-  speed = throttle;
+  // acceleration
+  if (keys["ArrowRight"]) car.vx += 0.25;
+  if (keys["ArrowLeft"]) car.vx -= 0.25;
 
   // physics
-  let lift = speed * (-pitch * 0.05);
-  velocity += 0.3 + wind - lift;
-  y += velocity;
+  car.vy += 0.6; // gravity
+  car.x += car.vx;
+  car.y += car.vy;
 
-  // fuel & distance
-  fuel -= 0.02 * throttle;
-  distance += speed;
+  car.vx *= 0.97;
 
-  // ground collision
-  if (y > window.innerHeight - 40) {
-    if (speed > 3 && Math.abs(velocity) < 4) {
-      endGame("Smooth Landing 🛬");
-    } else {
-      endGame("Crash 💥");
-    }
+  // terrain collision
+  let groundY = getGround(car.x);
+
+  if (car.y > groundY) {
+    car.y = groundY;
+    car.vy *= -0.2; // suspension bounce
   }
+
+  // slope angle
+  car.angle = Math.atan2(
+    getGround(car.x + 20) - getGround(car.x - 20),
+    40
+  );
+
+  // fuel drain
+  if (keys["ArrowRight"] || keys["ArrowLeft"]) fuel -= 0.04;
 
   if (fuel <= 0) endGame("Out of Fuel ⛽");
 
-  y = Math.max(0, y);
+  // crash
+  if (Math.abs(car.angle) > 1.4) {
+    endGame("Crash 💥");
+  }
 
-  // apply movement
-  plane.style.top = y + "px";
-  plane.style.transform = `rotate(${pitch}deg)`;
+  // coins
+  coins.forEach(c => {
+    if (!c.collected && Math.abs(car.x - c.x) < 30) {
+      c.collected = true;
+      coinCount++;
+    }
+  });
 
-  // HUD updates
-  document.getElementById("speed").innerText = "Speed: " + speed.toFixed(1);
-  document.getElementById("alt").innerText = "Altitude: " + Math.floor(window.innerHeight - y);
-  document.getElementById("fuel").innerText = "Fuel: " + Math.floor(fuel) + "%";
-  document.getElementById("dist").innerText = "Distance: " + Math.floor(distance) + "m";
+  distance = Math.floor(car.x / 10);
 
-  requestAnimationFrame(gameLoop);
+  updateHUD();
+  draw();
+
+  requestAnimationFrame(update);
 }
 
-/* END GAME */
-function endGame(message) {
+/* TERRAIN HEIGHT */
+function getGround(x) {
+  let i = Math.floor(x / 40);
+  if (i < 0 || i >= terrain.length) return 500;
+  return terrain[i].y;
+}
+
+/* DRAW */
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // SKY GRADIENT
+  ctx.fillStyle = "#38bdf8";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // CLOUDS (parallax)
+  ctx.fillStyle = "white";
+  for (let i = 0; i < 10; i++) {
+    ctx.beginPath();
+    ctx.arc((i*200 - car.x*0.2)%canvas.width, 100 + i*10, 30, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // GROUND
+  ctx.fillStyle = "#14532d";
+  ctx.beginPath();
+
+  for (let p of terrain) {
+    ctx.lineTo(p.x - car.x + 200, p.y);
+  }
+
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.fill();
+
+  // COINS
+  coins.forEach(c => {
+    if (!c.collected) {
+      ctx.fillStyle = "gold";
+      ctx.beginPath();
+      ctx.arc(c.x - car.x + 200, getGround(c.x)-20, 8, 0, Math.PI*2);
+      ctx.fill();
+    }
+  });
+
+  // CAR (simple but better shape)
+  ctx.save();
+  ctx.translate(200, car.y);
+  ctx.rotate(car.angle);
+
+  ctx.fillStyle = "red";
+  ctx.fillRect(-25, -10, 50, 20);
+
+  // wheels
+  ctx.fillStyle = "black";
+  ctx.fillRect(-20, 10, 15, 10);
+  ctx.fillRect(5, 10, 15, 10);
+
+  ctx.restore();
+}
+
+/* HUD */
+function updateHUD() {
+  document.getElementById("dist").innerText = "Distance: " + distance;
+  document.getElementById("coins").innerText = "Coins: " + coinCount;
+  document.getElementById("fuel").innerText = "Fuel: " + Math.floor(fuel);
+}
+
+/* GAME OVER */
+function endGame(msg) {
   gameRunning = false;
   document.getElementById("gameOver").style.display = "block";
-  document.getElementById("msg").innerText = message;
+  document.getElementById("msg").innerText = msg;
 }
 
-/* RESTART */
-function restart() {
-  location.reload();
-}
-
-gameLoop();
+update();
 </script>
 
 </body>
 </html>
-
-
    
