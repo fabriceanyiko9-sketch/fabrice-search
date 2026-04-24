@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -51,7 +51,17 @@
     #result {
       margin-top: 20px;
       font-size: 18px;
-      opacity: 0.8;
+      opacity: 0.9;
+      text-align: center;
+    }
+
+    a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -68,16 +78,23 @@
 
   <script>
     function search() {
-      const value = document.getElementById("searchBox").value;
+      const value = document.getElementById("searchBox").value.trim();
+      const result = document.getElementById("result");
 
-      if (value.trim() === "") {
-        document.getElementById("result").innerText = "Type something first 🙂";
-      } else {
-        document.getElementById("result").innerText =
-          "You searched for: " + value;
+      if (value === "") {
+        result.innerText = "Type something first 🙂";
+        return;
       }
+
+      result.innerHTML = `
+        Searching for: <b>${value}</b><br><br>
+        <a href="https://www.google.com/search?q=${encodeURIComponent(value)}" target="_blank">
+          Click here to view real Google results 🔍
+        </a>
+      `;
     }
   </script>
 
 </body>
 </html>
+
