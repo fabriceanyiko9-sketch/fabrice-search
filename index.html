@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Nova Search</title>
+<title>Nova AI Search Engine</title>
 
 <style>
 body {
@@ -12,20 +12,20 @@ body {
   color: white;
 }
 
-/* TOP BAR */
+/* HEADER */
 header {
   text-align: center;
-  padding: 40px 20px 10px;
+  padding: 35px 20px 10px;
 }
 
 header h1 {
-  font-size: 50px;
+  font-size: 52px;
   background: linear-gradient(90deg, #60a5fa, #a78bfa, #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* SEARCH BAR */
+/* SEARCH AREA */
 .search-container {
   display: flex;
   justify-content: center;
@@ -33,8 +33,9 @@ header h1 {
 }
 
 .search-box {
+  position: relative;
   display: flex;
-  width: 600px;
+  width: 650px;
   max-width: 90%;
   gap: 10px;
 }
@@ -57,15 +58,37 @@ button {
   cursor: pointer;
 }
 
+/* SUGGESTIONS */
+.suggestions {
+  position: absolute;
+  top: 55px;
+  width: 70%;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  display: none;
+  text-align: left;
+  z-index: 10;
+}
+
+.suggestions div {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.suggestions div:hover {
+  background: rgba(255,255,255,0.2);
+}
+
 /* RESULTS */
 #result {
-  max-width: 700px;
+  max-width: 750px;
   margin: 40px auto;
   padding: 0 20px;
 }
 
 .result-item {
-  margin-bottom: 25px;
+  margin-bottom: 18px;
   padding: 15px;
   background: rgba(255,255,255,0.05);
   border-radius: 12px;
@@ -73,13 +96,13 @@ button {
 
 .result-item a {
   color: #60a5fa;
-  font-size: 20px;
+  font-size: 18px;
   text-decoration: none;
 }
 
 .result-item p {
   opacity: 0.8;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 /* FOOTER */
@@ -96,13 +119,18 @@ footer {
 <body>
 
 <header>
-  <h1>Nova Search</h1>
+  <h1>Nova AI Search</h1>
 </header>
 
 <div class="search-container">
   <div class="search-box">
-    <input id="searchBox" placeholder="Search anything...">
+
+    <input id="searchBox" placeholder="Search anything..." oninput="showSuggestions()">
+
     <button onclick="search()">Search</button>
+
+    <div id="suggestions" class="suggestions"></div>
+
   </div>
 </div>
 
@@ -113,6 +141,45 @@ footer {
 </footer>
 
 <script>
+const suggestionsData = [
+  "Roblox","Minecraft","Fortnite","Google","YouTube",
+  "Kenya","Aviation","Space","Technology","AI",
+  "Football","Coding","Python","JavaScript"
+];
+
+/* AUTOCOMPLETE */
+function showSuggestions() {
+  const input = document.getElementById("searchBox").value.toLowerCase();
+  const box = document.getElementById("suggestions");
+
+  box.innerHTML = "";
+
+  if (!input) {
+    box.style.display = "none";
+    return;
+  }
+
+  const matches = suggestionsData.filter(item =>
+    item.toLowerCase().includes(input)
+  );
+
+  matches.forEach(item => {
+    const div = document.createElement("div");
+    div.innerText = item;
+
+    div.onclick = () => {
+      document.getElementById("searchBox").value = item;
+      box.style.display = "none";
+      search();
+    };
+
+    box.appendChild(div);
+  });
+
+  box.style.display = matches.length ? "block" : "none";
+}
+
+/* MAIN SEARCH ENGINE */
 async function search() {
   const query = document.getElementById("searchBox").value.trim();
   const result = document.getElementById("result");
@@ -122,31 +189,57 @@ async function search() {
     return;
   }
 
-  result.innerHTML = "Searching Wikipedia... 🔍";
+  result.innerHTML = "AI is searching the web... 🤖🔍";
 
   try {
-    // Wikipedia SEARCH API (MULTIPLE RESULTS)
-    const response = await fetch(
+    // Wikipedia search
+    const wikiRes = await fetch(
       `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`
     );
 
-    const data = await response.json();
-    const results = data.query.search;
+    const wikiData = await wikiRes.json();
+    let results = wikiData?.query?.search || [];
 
-    if (!results.length) {
-      result.innerHTML = `<h3>No results found for "${query}"</h3>`;
-      return;
+    // DuckDuckGo instant answer
+    const ddgRes = await fetch(
+      `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1`
+    );
+
+    const ddgData = await ddgRes.json();
+
+    let output = "";
+
+    // AI quick answer
+    if (ddgData.AbstractText) {
+      output += `
+        <div class="result-item">
+          <h3>AI Answer 🤖</h3>
+          <p>${ddgData.AbstractText}</p>
+        </div>
+      `;
+    } else {
+      output += aiBrain(query);
     }
 
-    result.innerHTML = "";
+    // Rank results
+    results = results.map(item => {
+      let score = 0;
 
-    results.forEach(item => {
+      if (item.title.toLowerCase().includes(query.toLowerCase())) score += 10;
+      if (item.snippet.toLowerCase().includes(query.toLowerCase())) score += 5;
+
+      return { ...item, score };
+    });
+
+    results.sort((a, b) => b.score - a.score);
+
+    // Render results
+    results.slice(0, 6).forEach(item => {
       const title = item.title;
       const snippet = item.snippet.replace(/<\/?span[^>]*>/g, "");
-
       const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`;
 
-      result.innerHTML += `
+      output += `
         <div class="result-item">
           <a href="${url}" target="_blank">${title}</a>
           <p>${snippet}...</p>
@@ -154,9 +247,35 @@ async function search() {
       `;
     });
 
+    result.innerHTML = output;
+
   } catch (error) {
-    result.innerHTML = "Error loading results 😕";
+    result.innerHTML = aiBrain(query);
   }
+}
+
+/* AI BRAIN */
+function aiBrain(query) {
+  const q = query.toLowerCase();
+
+  if (q.includes("roblox")) {
+    return `<div class="result-item"><h3>AI Answer 🤖</h3><p>Roblox is a platform where users create and play games.</p></div>`;
+  }
+
+  if (q.includes("kenya")) {
+    return `<div class="result-item"><h3>AI Answer 🤖</h3><p>Kenya is an East African country known for Nairobi and wildlife.</p></div>`;
+  }
+
+  if (q.includes("aviation")) {
+    return `<div class="result-item"><h3>AI Answer 🤖</h3><p>Aviation is the science of aircraft and flight.</p></div>`;
+  }
+
+  return `
+    <div class="result-item">
+      <h3>AI Answer 🤖</h3>
+      <p>No direct data found, but this is a general topic. Try refining your search.</p>
+    </div>
+  `;
 }
 </script>
 
