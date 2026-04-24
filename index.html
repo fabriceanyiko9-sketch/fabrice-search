@@ -7,34 +7,49 @@
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      margin-top: 100px;
-      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+    }
+
+    h1 {
+      font-size: 50px;
+      margin-bottom: 30px;
     }
 
     input {
-      padding: 12px;
-      width: 250px;
-      border-radius: 20px;
-      border: 1px solid #ccc;
+      padding: 15px;
+      width: 300px;
+      border-radius: 25px;
+      border: none;
+      outline: none;
+      font-size: 16px;
     }
 
     button {
-      padding: 10px 20px;
       margin-top: 15px;
-      border-radius: 20px;
+      padding: 12px 25px;
+      border-radius: 25px;
       border: none;
-      background: #4285f4;
+      background: #3b82f6;
       color: white;
       cursor: pointer;
+      transition: 0.3s;
     }
 
     button:hover {
-      background: #3367d6;
+      background: #2563eb;
+      transform: scale(1.05);
     }
 
     #result {
       margin-top: 20px;
       font-size: 18px;
+      opacity: 0.8;
     }
   </style>
 </head>
@@ -51,7 +66,13 @@
 
   <script>
     function search() {
-      let input = document.getElementById("searchBox").value;
+      const input = document.getElementById("searchBox").value;
+
+      if (!input) {
+        document.getElementById("result").innerText = "Type something first 🙂";
+        return;
+      }
+
       document.getElementById("result").innerText =
         "You searched for: " + input;
     }
@@ -59,3 +80,4 @@
 
 </body>
 </html>
+
