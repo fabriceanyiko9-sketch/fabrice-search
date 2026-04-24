@@ -1,284 +1,212 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Nova AI Search Engine</title>
+<title>Nova Flight Simulator ✈️</title>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
   margin: 0;
-  background: #0f172a;
+  overflow: hidden;
+  font-family: Arial;
   color: white;
 }
 
-/* HEADER */
-header {
+/* WORLD */
+#world {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#1e3a8a 60%, #14532d 60%);
+}
+
+/* RUNWAY */
+#runway {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 40px;
+  background: #333;
+}
+
+/* PLANE */
+#plane {
+  position: absolute;
+  left: 120px;
+  width: 60px;
+  height: 30px;
+  background: cyan;
+  border-radius: 5px;
+}
+
+/* CLOUD */
+.cloud {
+  position: absolute;
+  width: 100px;
+  height: 50px;
+  background: white;
+  border-radius: 50px;
+  opacity: 0.3;
+}
+
+/* HUD */
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 14px;
+}
+
+#hud span {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* GAME OVER */
+#gameOver {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  display: none;
   text-align: center;
-  padding: 35px 20px 10px;
-}
-
-header h1 {
-  font-size: 52px;
-  background: linear-gradient(90deg, #60a5fa, #a78bfa, #34d399);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* SEARCH AREA */
-.search-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.search-box {
-  position: relative;
-  display: flex;
-  width: 650px;
-  max-width: 90%;
-  gap: 10px;
-}
-
-input {
-  flex: 1;
-  padding: 14px;
-  border-radius: 30px;
-  border: none;
-  outline: none;
-  font-size: 16px;
 }
 
 button {
-  padding: 14px 20px;
-  border-radius: 30px;
-  border: none;
-  background: #3b82f6;
-  color: white;
+  padding: 10px 20px;
   cursor: pointer;
-}
-
-/* SUGGESTIONS */
-.suggestions {
-  position: absolute;
-  top: 55px;
-  width: 70%;
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(10px);
-  border-radius: 10px;
-  display: none;
-  text-align: left;
-  z-index: 10;
-}
-
-.suggestions div {
-  padding: 10px;
-  cursor: pointer;
-}
-
-.suggestions div:hover {
-  background: rgba(255,255,255,0.2);
-}
-
-/* RESULTS */
-#result {
-  max-width: 750px;
-  margin: 40px auto;
-  padding: 0 20px;
-}
-
-.result-item {
-  margin-bottom: 18px;
-  padding: 15px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 12px;
-}
-
-.result-item a {
-  color: #60a5fa;
-  font-size: 18px;
-  text-decoration: none;
-}
-
-.result-item p {
-  opacity: 0.8;
-  margin-top: 6px;
-}
-
-/* FOOTER */
-footer {
-  text-align: center;
-  font-size: 12px;
-  opacity: 0.5;
-  margin-top: 60px;
-  padding-bottom: 30px;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <h1>Nova AI Search</h1>
-</header>
+<div id="world"></div>
+<div id="runway"></div>
+<div id="plane"></div>
 
-<div class="search-container">
-  <div class="search-box">
-
-    <input id="searchBox" placeholder="Search anything..." oninput="showSuggestions()">
-
-    <button onclick="search()">Search</button>
-
-    <div id="suggestions" class="suggestions"></div>
-
-  </div>
+<div id="hud">
+  <span id="speed">Speed: 0</span>
+  <span id="alt">Altitude: 0</span>
+  <span id="fuel">Fuel: 100%</span>
+  <span id="dist">Distance: 0m</span>
 </div>
 
-<div id="result"></div>
-
-<footer>
-  Built by Fabrice 🚀
-</footer>
+<div id="gameOver">
+  <h1 id="msg"></h1>
+  <button onclick="restart()">Restart</button>
+</div>
 
 <script>
-const suggestionsData = [
-  "Roblox","Minecraft","Fortnite","Google","YouTube",
-  "Kenya","Aviation","Space","Technology","AI",
-  "Football","Coding","Python","JavaScript"
-];
+const plane = document.getElementById("plane");
 
-/* AUTOCOMPLETE */
-function showSuggestions() {
-  const input = document.getElementById("searchBox").value.toLowerCase();
-  const box = document.getElementById("suggestions");
+let y = window.innerHeight - 70;
+let velocity = 0;
+let pitch = 0;
+let throttle = 0;
+let speed = 0;
 
-  box.innerHTML = "";
+let fuel = 100;
+let distance = 0;
+let gameRunning = true;
 
-  if (!input) {
-    box.style.display = "none";
-    return;
+// wind effect
+let wind = (Math.random() - 0.5) * 0.2;
+
+/* CONTROLS */
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowUp") pitch -= 2;
+  if (e.key === "ArrowDown") pitch += 2;
+  if (e.key === "ArrowRight") throttle += 0.3;
+  if (e.key === "ArrowLeft") throttle -= 0.3;
+});
+
+/* CLOUDS */
+function createCloud() {
+  const cloud = document.createElement("div");
+  cloud.classList.add("cloud");
+  cloud.style.top = Math.random() * 300 + "px";
+  document.body.appendChild(cloud);
+
+  let x = window.innerWidth;
+
+  function move() {
+    if (!gameRunning) return;
+
+    x -= 1;
+    cloud.style.left = x + "px";
+
+    if (x < -100) cloud.remove();
+    else requestAnimationFrame(move);
   }
 
-  const matches = suggestionsData.filter(item =>
-    item.toLowerCase().includes(input)
-  );
-
-  matches.forEach(item => {
-    const div = document.createElement("div");
-    div.innerText = item;
-
-    div.onclick = () => {
-      document.getElementById("searchBox").value = item;
-      box.style.display = "none";
-      search();
-    };
-
-    box.appendChild(div);
-  });
-
-  box.style.display = matches.length ? "block" : "none";
+  move();
 }
 
-/* MAIN SEARCH ENGINE */
-async function search() {
-  const query = document.getElementById("searchBox").value.trim();
-  const result = document.getElementById("result");
+setInterval(createCloud, 2000);
 
-  if (!query) {
-    result.innerHTML = "Type something first 🙂";
-    return;
-  }
+/* GAME LOOP */
+function gameLoop() {
+  if (!gameRunning) return;
 
-  result.innerHTML = "AI is searching the web... 🤖🔍";
+  // clamp controls
+  pitch = Math.max(-20, Math.min(20, pitch));
+  throttle = Math.max(0, Math.min(6, throttle));
 
-  try {
-    // Wikipedia search
-    const wikiRes = await fetch(
-      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`
-    );
+  speed = throttle;
 
-    const wikiData = await wikiRes.json();
-    let results = wikiData?.query?.search || [];
+  // physics
+  let lift = speed * (-pitch * 0.05);
+  velocity += 0.3 + wind - lift;
+  y += velocity;
 
-    // DuckDuckGo instant answer
-    const ddgRes = await fetch(
-      `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1`
-    );
+  // fuel & distance
+  fuel -= 0.02 * throttle;
+  distance += speed;
 
-    const ddgData = await ddgRes.json();
-
-    let output = "";
-
-    // AI quick answer
-    if (ddgData.AbstractText) {
-      output += `
-        <div class="result-item">
-          <h3>AI Answer 🤖</h3>
-          <p>${ddgData.AbstractText}</p>
-        </div>
-      `;
+  // ground collision
+  if (y > window.innerHeight - 40) {
+    if (speed > 3 && Math.abs(velocity) < 4) {
+      endGame("Smooth Landing 🛬");
     } else {
-      output += aiBrain(query);
+      endGame("Crash 💥");
     }
-
-    // Rank results
-    results = results.map(item => {
-      let score = 0;
-
-      if (item.title.toLowerCase().includes(query.toLowerCase())) score += 10;
-      if (item.snippet.toLowerCase().includes(query.toLowerCase())) score += 5;
-
-      return { ...item, score };
-    });
-
-    results.sort((a, b) => b.score - a.score);
-
-    // Render results
-    results.slice(0, 6).forEach(item => {
-      const title = item.title;
-      const snippet = item.snippet.replace(/<\/?span[^>]*>/g, "");
-      const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`;
-
-      output += `
-        <div class="result-item">
-          <a href="${url}" target="_blank">${title}</a>
-          <p>${snippet}...</p>
-        </div>
-      `;
-    });
-
-    result.innerHTML = output;
-
-  } catch (error) {
-    result.innerHTML = aiBrain(query);
   }
+
+  if (fuel <= 0) endGame("Out of Fuel ⛽");
+
+  y = Math.max(0, y);
+
+  // apply movement
+  plane.style.top = y + "px";
+  plane.style.transform = `rotate(${pitch}deg)`;
+
+  // HUD updates
+  document.getElementById("speed").innerText = "Speed: " + speed.toFixed(1);
+  document.getElementById("alt").innerText = "Altitude: " + Math.floor(window.innerHeight - y);
+  document.getElementById("fuel").innerText = "Fuel: " + Math.floor(fuel) + "%";
+  document.getElementById("dist").innerText = "Distance: " + Math.floor(distance) + "m";
+
+  requestAnimationFrame(gameLoop);
 }
 
-/* AI BRAIN */
-function aiBrain(query) {
-  const q = query.toLowerCase();
-
-  if (q.includes("roblox")) {
-    return `<div class="result-item"><h3>AI Answer 🤖</h3><p>Roblox is a platform where users create and play games.</p></div>`;
-  }
-
-  if (q.includes("kenya")) {
-    return `<div class="result-item"><h3>AI Answer 🤖</h3><p>Kenya is an East African country known for Nairobi and wildlife.</p></div>`;
-  }
-
-  if (q.includes("aviation")) {
-    return `<div class="result-item"><h3>AI Answer 🤖</h3><p>Aviation is the science of aircraft and flight.</p></div>`;
-  }
-
-  return `
-    <div class="result-item">
-      <h3>AI Answer 🤖</h3>
-      <p>No direct data found, but this is a general topic. Try refining your search.</p>
-    </div>
-  `;
+/* END GAME */
+function endGame(message) {
+  gameRunning = false;
+  document.getElementById("gameOver").style.display = "block";
+  document.getElementById("msg").innerText = message;
 }
+
+/* RESTART */
+function restart() {
+  location.reload();
+}
+
+gameLoop();
 </script>
 
 </body>
 </html>
 
+
+   
