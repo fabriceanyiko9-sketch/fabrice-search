@@ -1,28 +1,29 @@
-<!DOCTYPE html>
-<html>
+ <!DOCTYPE html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Fabrice Search</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       margin: 0;
       height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      align-items: center;
       background: linear-gradient(135deg, #0f172a, #1e293b);
       color: white;
     }
 
     h1 {
-      font-size: 50px;
-      margin-bottom: 30px;
+      font-size: 48px;
+      margin-bottom: 25px;
     }
 
     input {
-      padding: 15px;
+      padding: 14px;
       width: 300px;
       border-radius: 25px;
       border: none;
@@ -32,11 +33,12 @@
 
     button {
       margin-top: 15px;
-      padding: 12px 25px;
+      padding: 12px 24px;
       border-radius: 25px;
       border: none;
       background: #3b82f6;
       color: white;
+      font-size: 16px;
       cursor: pointer;
       transition: 0.3s;
     }
@@ -58,26 +60,24 @@
 
   <h1>Fabrice Search</h1>
 
-  <input type="text" id="searchBox" placeholder="Search something...">
-  <br>
+  <input id="searchBox" type="text" placeholder="Search anything...">
+
   <button onclick="search()">Search</button>
 
   <p id="result"></p>
 
   <script>
     function search() {
-      const input = document.getElementById("searchBox").value;
+      const value = document.getElementById("searchBox").value;
 
-      if (!input) {
+      if (value.trim() === "") {
         document.getElementById("result").innerText = "Type something first 🙂";
-        return;
+      } else {
+        document.getElementById("result").innerText =
+          "You searched for: " + value;
       }
-
-      document.getElementById("result").innerText =
-        "You searched for: " + input;
     }
   </script>
 
 </body>
 </html>
-
