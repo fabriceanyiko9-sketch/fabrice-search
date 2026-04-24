@@ -1,16 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title>Fabrice Search</title>
+
   <style>
-    /* your CSS is here */
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 100px;
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+    }
+
+    input {
+      padding: 12px;
+      width: 250px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      border-radius: 20px;
+      border: none;
+      background: #4285f4;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #3367d6;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+    }
   </style>
 </head>
 
 <body>
-  <!-- your HTML is here -->
+
+  <h1>Fabrice Search</h1>
+
+  <input type="text" id="searchBox" placeholder="Search something...">
+  <br>
+  <button onclick="search()">Search</button>
+
+  <p id="result"></p>
 
   <script>
-    // your JS is here
+    function search() {
+      let input = document.getElementById("searchBox").value;
+      document.getElementById("result").innerText =
+        "You searched for: " + input;
+    }
   </script>
+
 </body>
 </html>
